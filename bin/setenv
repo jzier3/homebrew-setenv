@@ -117,6 +117,7 @@ main() {
   [[ $# -eq 0 ]] && { exit 1; }
 
   case "$1" in
+    init) init_zsh ;;
     help) usage ;;
     view) view_all ;;
     search) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; search_vars "$1" ;;
