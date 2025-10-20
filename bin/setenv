@@ -1,0 +1,84 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+STORE_DIR="${SETENV_STORE_DIR:-$HOME/.setenv}"
+STORE_FILE="$STORE_DIR/vars.sh"
+
+usage() {
+  cat <<EOF
+Usage:
+  setenv view
+  setenv search <pattern>
+  setenv delete <VAR>
+  setenv update <VAR>=<VALUE>
+  setenv <VAR>=<VALUE>         # shorthand for update
+EOF
+}
+
+ensure_store() {
+  mkdir -p "$STORE_DIR"
+  if [[ ! -f "$STORE_FILE" ]]; then
+    cat >"$STORE_FILE" <<'EOS'
+# ~/.setenv/vars.sh
+# Managed by setenv CLI
+EOS
+  fi
+}
+
+valid_var() { [[ "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; }
+
+shell_escape() {
+  local s="$1"
+  s="${s//\\/\\\\}"
+  s="${s//\"/\\\"}"
+  printf '%s' "$s"
+}
+
+set_kv() {
+  local pair="$1"
+  if [[ "$pair" != *"="* ]]; then
+    echo "Error: expected VAR=VALUE" >&2; exit 2
+  fi
+  local var="${pair%%=*}"
+  local val="${pair#*=}"
+  valid_var "$var" || { echo "Invalid var name $var" >&2; exit 2; }
+
+  # Remove existing lines for this var
+  awk -v V="$var" '
+    $0 !~ "^[[:space:]]*export[[:space:]]*"V"="
+  ' "$STORE_FILE" >"$STORE_FILE.tmp" || true
+
+  local esc; esc=$(shell_escape "$val")
+  printf 'export %s="%s"\n' "$var" "$esc" >>"$STORE_FILE.tmp"
+
+  mv "$STORE_FILE.tmp" "$STORE_FILE"
+  echo "Updated: $var"
+}
+
+delete_var() {
+  local var="$1"
+  valid_var "$var" || { echo "Invalid var name $var" >&2; exit 2; }
+  awk -v V="$var" '
+    $0 !~ "^[[:space:]]*export[[:space:]]*"V"="
+  ' "$STORE_FILE" >"$STORE_FILE.tmp" || true
+  mv "$STORE_FILE.tmp" "$STORE_FILE"
+  echo "Deleted: $var (if existed)"
+}
+
+view_all() { grep '^export' "$STORE_FILE" | sed 's/^export //'; }
+search_vars() { grep -i "$1" "$STORE_FILE" | sed 's/^export //'; }
+
+main() {
+  ensure_store
+  [[ $# -eq 0 ]] && { usage; exit 1; }
+
+  case "$1" in
+    view) view_all ;;
+    search) shift; search_vars "$@" ;;
+    delete) shift; delete_var "$1" ;;
+    update) shift; set_kv "$1" ;;
+    *) [[ "$1" == *"="* ]] && set_kv "$1" || usage ;;
+  esac
+}
+main "$@"
+
