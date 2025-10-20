@@ -30,22 +30,17 @@ class Setenv < Formula
   end
 
 
-  def caveats
-    <<~EOS
-      Add ONE of the following to your shell config:
+def caveats
+  <<~EOS
+    Please run:
+      setenv init
+    Your variables live in ~/.setenv/env.sh and auto-reload on change.
+        To reload vars in an existing shell after updating them in a DIFFERENT session, simple run setenv.
 
-      Zsh (~/.zshrc):
-        setenv() {
-          command setenv "$@"   # call the real Homebrew binary
-          [ -f "$HOME/.setenv/env.sh" ] && . "$HOME/.setenv/env.sh"
-        }
-
-      Then restart your shell or run:
-        source ~/.zshrc
-
-      Your variables live in ~/.setenv/env.sh and auto-reload on change in your current shell, or after calling setenv in a new shell.
-    EOS
-  end
+    🧹 To completely remove setenv and its data after uninstalling:
+            rm -rf "$HOME/.setenv"
+  EOS
+end
 
   test do
     system "#{bin}/setenv", "view"
