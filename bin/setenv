@@ -36,18 +36,21 @@ shell_escape() {
   printf '%s' "$s"
 }
 
-# Rebuild the exports file that the shell hook sources
 regen_env() {
-  # Keep only the export lines; if none, create an empty file
-  if grep -q '^export ' "$STORE_FILE"; then
-    grep '^export ' "$STORE_FILE" >"$ENV_FILE.tmp"
+  # Rebuild exports from vars.sh, stripping CR and ignoring comments/blank lines
+  if grep -Eq '^[[:space:]]*export[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=' "$STORE_FILE"; then
+    awk '
+      /^[[:space:]]*export[[:space:]]+[A-Za-z_][A-Za-z0-9_]*=/ {
+        sub(/\r$/,""); print
+      }
+    ' "$STORE_FILE" >"$ENV_FILE.tmp"
   else
     : >"$ENV_FILE.tmp"
   fi
   mv "$ENV_FILE.tmp" "$ENV_FILE"
-  # bump mtime so the zsh precmd hook notices the change
-  touch "$ENV_FILE"
+  touch "$ENV_FILE"   # trigger zsh precmd hook in other sessions
 }
+
 
 set_kv() {
   local pair="$1"
