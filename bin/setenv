@@ -3,6 +3,7 @@ set -euo pipefail
 
 STORE_DIR="${SETENV_STORE_DIR:-$HOME/.setenv}"
 STORE_FILE="$STORE_DIR/vars.sh"
+ENV_FILE="$STORE_DIR/env.sh"
 
 usage() {
   cat <<EOF
@@ -23,6 +24,7 @@ ensure_store() {
 # Managed by setenv CLI
 EOS
   fi
+  regen_env   # ensure env.sh exists/syncs with vars.sh on first run
 }
 
 valid_var() { [[ "$1" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; }
@@ -32,6 +34,19 @@ shell_escape() {
   s="${s//\\/\\\\}"
   s="${s//\"/\\\"}"
   printf '%s' "$s"
+}
+
+# Rebuild the exports file that the shell hook sources
+regen_env() {
+  # Keep only the export lines; if none, create an empty file
+  if grep -q '^export ' "$STORE_FILE"; then
+    grep '^export ' "$STORE_FILE" >"$ENV_FILE.tmp"
+  else
+    : >"$ENV_FILE.tmp"
+  fi
+  mv "$ENV_FILE.tmp" "$ENV_FILE"
+  # bump mtime so the zsh precmd hook notices the change
+  touch "$ENV_FILE"
 }
 
 set_kv() {
@@ -52,6 +67,7 @@ set_kv() {
   printf 'export %s="%s"\n' "$var" "$esc" >>"$STORE_FILE.tmp"
 
   mv "$STORE_FILE.tmp" "$STORE_FILE"
+  regen_env
   echo "Updated: $var"
 }
 
@@ -62,11 +78,12 @@ delete_var() {
     $0 !~ "^[[:space:]]*export[[:space:]]*"V"="
   ' "$STORE_FILE" >"$STORE_FILE.tmp" || true
   mv "$STORE_FILE.tmp" "$STORE_FILE"
+  regen_env
   echo "Deleted: $var (if existed)"
 }
 
 view_all() { grep '^export' "$STORE_FILE" | sed 's/^export //'; }
-search_vars() { grep -i "$1" "$STORE_FILE" | sed 's/^export //'; }
+search_vars() { grep -i '^export' "$STORE_FILE" | grep -i "$1" | sed 's/^export //'; }
 
 main() {
   ensure_store
@@ -74,11 +91,10 @@ main() {
 
   case "$1" in
     view) view_all ;;
-    search) shift; search_vars "$@" ;;
-    delete) shift; delete_var "$1" ;;
-    update) shift; set_kv "$1" ;;
-    *) [[ "$1" == *"="* ]] && set_kv "$1" || usage ;;
+    search) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; search_vars "$1" ;;
+    delete) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; delete_var "$1" ;;
+    update) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; set_kv "$1" ;;
+    *) [[ "$1" == *"="* ]] && set_kv "$1" || { usage; exit 1; } ;;
   esac
 }
 main "$@"
-
