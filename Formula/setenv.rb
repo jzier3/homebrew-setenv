@@ -1,7 +1,7 @@
 class Setenv < Formula
   desc "CLI tool to manage global environment variables across shell sessions"
   homepage "https://github.com/jzier3/setenv"
-  url "https://github.com/jzier3/homebrew-setenv/archive/refs/tags/v1.0.15.tar.gz"
+  url "https://github.com/jzier3/homebrew-setenv/archive/refs/tags/v1.0.16.tar.gz"
   sha256 "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
   license "MIT"
 
