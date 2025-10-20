@@ -1,8 +1,8 @@
 class Setenv < Formula
   desc "CLI tool to manage global environment variables across shell sessions"
   homepage "https://github.com/jzier3/setenv"
-  url "https://github.com/jzier3/setenv/archive/refs/tags/v1.0.7.tar.gz"
-  sha256 "41f75c6de31215ce4345b63e4829d8ce9f227fc1f24c4d4c197f1137513d34c8"
+  url "https://github.com/jzier3/setenv/archive/refs/tags/v1.0.8.tar.gz"
+  sha256 "d5558cd419c8d46bdc958064cb97f963d1ea793866414c025906ec15033512ed"
   license "MIT"
 
   def install
@@ -35,15 +35,15 @@ class Setenv < Formula
       Add ONE of the following to your shell config:
 
       Zsh (~/.zshrc):
-        source "#{opt_prefix}/setenv_zsh_hook.sh"
-
-      Bash (~/.bashrc or ~/.bash_profile):
-        source "#{opt_prefix}/setenv_bash_hook.sh"
+        setenv() {
+          command setenv "$@"   # call the real Homebrew binary
+          [ -f "$HOME/.setenv/env.sh" ] && . "$HOME/.setenv/env.sh"
+        }
 
       Then restart your shell or run:
-        source ~/.zshrc    # or source ~/.bashrc
+        source ~/.zshrc
 
-      Your variables live in ~/.setenv/env.sh and auto-reload on change.
+      Your variables live in ~/.setenv/env.sh and auto-reload on change in your current shell, or after calling setenv in a new shell.
     EOS
   end
 
@@ -51,3 +51,4 @@ class Setenv < Formula
     system "#{bin}/setenv", "view"
   end
 end
+

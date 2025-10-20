@@ -88,11 +88,36 @@ delete_var() {
 view_all() { grep '^export' "$STORE_FILE" | sed 's/^export //'; }
 search_vars() { grep -i '^export' "$STORE_FILE" | grep -i "$1" | sed 's/^export //'; }
 
+
+init_zsh() {
+  local rcfile="$HOME/.zshrc"
+  local marker="command setenv"
+  mkdir -p "$(dirname "$rcfile")"
+  touch "$rcfile"
+
+  if grep -q "$marker" "$rcfile"; then
+    echo "setenv already initialized in $rcfile"
+  else
+    cat >> "$rcfile" <<'EOF'
+
+# --- setenv init ---
+setenv() {
+  command setenv "$@"   # call the real Homebrew binary
+  [ -f "$HOME/.setenv/env.sh" ] && . "$HOME/.setenv/env.sh"
+}
+# --- end setenv init ---
+EOF
+    echo "✅ Added setenv function to $rcfile"
+    echo "Run 'source $rcfile' or restart your shell to activate."
+  fi
+}
+
 main() {
   ensure_store
-  [[ $# -eq 0 ]] && { usage; exit 1; }
+  [[ $# -eq 0 ]] && { exit 1; }
 
   case "$1" in
+    help) usage ;;
     view) view_all ;;
     search) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; search_vars "$1" ;;
     delete) shift; [[ $# -ge 1 ]] || { usage; exit 1; }; delete_var "$1" ;;
